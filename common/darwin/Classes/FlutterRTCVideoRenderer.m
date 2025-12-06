@@ -261,9 +261,30 @@
     if (_pixelBufferRef) {
       CVBufferRelease(_pixelBufferRef);
     }
-    NSDictionary* pixelAttributes = @{(id)kCVPixelBufferIOSurfacePropertiesKey : @{}};
-    CVPixelBufferCreate(kCFAllocatorDefault, size.width, size.height, kCVPixelFormatType_32BGRA,
+    // Use NV12 Full Range format to match common video encoder colorimetry settings (BT.709 Full Range)
+    // This fixes color washout issues when the source video uses Full Range (0-255) YUV
+    NSDictionary* pixelAttributes = @{
+      (id)kCVPixelBufferIOSurfacePropertiesKey : @{},
+    };
+    CVPixelBufferCreate(kCFAllocatorDefault, size.width, size.height, 
+                        kCVPixelFormatType_420YpCbCr8BiPlanarFullRange,
                         (__bridge CFDictionaryRef)(pixelAttributes), &_pixelBufferRef);
+    
+    // Set color space attachments for proper YUV to RGB conversion
+    if (_pixelBufferRef) {
+      // BT.709 color matrix
+      CFStringRef colorMatrix = kCVImageBufferYCbCrMatrix_ITU_R_709_2;
+      CVBufferSetAttachment(_pixelBufferRef, kCVImageBufferYCbCrMatrixKey, colorMatrix, kCVAttachmentMode_ShouldPropagate);
+      
+      // BT.709 color primaries
+      CFStringRef colorPrimaries = kCVImageBufferColorPrimaries_ITU_R_709_2;
+      CVBufferSetAttachment(_pixelBufferRef, kCVImageBufferColorPrimariesKey, colorPrimaries, kCVAttachmentMode_ShouldPropagate);
+      
+      // BT.709 transfer function
+      CFStringRef transferFunction = kCVImageBufferTransferFunction_ITU_R_709_2;
+      CVBufferSetAttachment(_pixelBufferRef, kCVImageBufferTransferFunctionKey, transferFunction, kCVAttachmentMode_ShouldPropagate);
+    }
+    
     _frameAvailable = false;
     _frameSize = size;
   }
