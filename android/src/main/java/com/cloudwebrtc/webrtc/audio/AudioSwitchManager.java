@@ -73,7 +73,8 @@ public class AudioSwitchManager {
      * <br />
      * Defaults to AudioManager.MODE_NORMAL.
      */
-    private int audioMode = AudioManager.MODE_IN_COMMUNICATION;
+    // 默认使用媒体模式（适合远程桌面/流媒体播放），而不是通话模式
+    private int audioMode = AudioManager.MODE_NORMAL;
 
     /**
      * The audio stream type to use when requesting audio focus on pre-O devices.
@@ -85,7 +86,8 @@ public class AudioSwitchManager {
      * <br />
      * Note: Manual audio routing may not work appropriately when using non-default values.
      */
-    private int audioStreamType = AudioManager.STREAM_VOICE_CALL;
+    // 默认使用媒体流（适合远程桌面/流媒体播放），而不是语音通话流
+    private int audioStreamType = AudioManager.STREAM_MUSIC;
 
     /**
      * The audio attribute usage type to use when requesting audio focus on devices O and beyond.
@@ -97,7 +99,8 @@ public class AudioSwitchManager {
      * <br />
      * Note: Manual audio routing may not work appropriately when using non-default values.
      */
-    private int audioAttributeUsageType = AudioAttributes.USAGE_VOICE_COMMUNICATION;
+    // 默认使用媒体用途（适合远程桌面/流媒体播放），而不是语音通信
+    private int audioAttributeUsageType = AudioAttributes.USAGE_MEDIA;
 
     /**
      * The audio attribute content type to use when requesting audio focus on devices O and beyond.
@@ -109,7 +112,8 @@ public class AudioSwitchManager {
      * <br />
      * Note: Manual audio routing may not work appropriately when using non-default values.
      */
-    private int audioAttributeContentType = AudioAttributes.CONTENT_TYPE_SPEECH;
+    // 默认使用音效内容类型（适合远程桌面/流媒体播放），而不是语音
+    private int audioAttributeContentType = AudioAttributes.CONTENT_TYPE_SONIFICATION;
 
     /**
      * On certain Android devices, audio routing does not function properly and bluetooth microphones will not work
@@ -137,6 +141,12 @@ public class AudioSwitchManager {
         if (audioSwitch == null) {
             handler.removeCallbacksAndMessages(null);
             handler.postAtFrontOfQueue(() -> {
+                // 日志：打印当前音频配置
+                android.util.Log.i(TAG, "AudioSwitchManager: Initializing with audioMode=" + audioMode + 
+                    ", streamType=" + audioStreamType + 
+                    ", usageType=" + audioAttributeUsageType + 
+                    ", contentType=" + audioAttributeContentType);
+                
                 audioSwitch = new AudioSwitch(
                         context,
                         loggingEnabled,
@@ -151,6 +161,8 @@ public class AudioSwitchManager {
                 audioSwitch.setAudioAttributeUsageType(audioAttributeUsageType);
                 audioSwitch.setForceHandleAudioRouting(forceHandleAudioRouting);
                 audioSwitch.start(audioDeviceChangeListener);
+                
+                android.util.Log.i(TAG, "AudioSwitchManager: AudioSwitch started with MEDIA mode");
             });
         }
     }

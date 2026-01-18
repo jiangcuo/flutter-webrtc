@@ -153,38 +153,6 @@
                  dstStrideUV:(int)dstUVStride
                        width:i420Buffer.width
                       height:i420Buffer.height];
-
-  } else {
-    uint8_t* dst = CVPixelBufferGetBaseAddress(outputPixelBuffer);
-    const size_t bytesPerRow = CVPixelBufferGetBytesPerRow(outputPixelBuffer);
-
-    if (pixelFormat == kCVPixelFormatType_32BGRA) {
-      // Corresponds to libyuv::FOURCC_ARGB
-
-      [RTCYUVHelper I420ToARGB:i420Buffer.dataY
-                    srcStrideY:i420Buffer.strideY
-                          srcU:i420Buffer.dataU
-                    srcStrideU:i420Buffer.strideU
-                          srcV:i420Buffer.dataV
-                    srcStrideV:i420Buffer.strideV
-                       dstARGB:dst
-                 dstStrideARGB:(int)bytesPerRow
-                         width:i420Buffer.width
-                        height:i420Buffer.height];
-
-    } else if (pixelFormat == kCVPixelFormatType_32ARGB) {
-      // Corresponds to libyuv::FOURCC_BGRA
-      [RTCYUVHelper I420ToBGRA:i420Buffer.dataY
-                    srcStrideY:i420Buffer.strideY
-                          srcU:i420Buffer.dataU
-                    srcStrideU:i420Buffer.strideU
-                          srcV:i420Buffer.dataV
-                    srcStrideV:i420Buffer.strideV
-                       dstBGRA:dst
-                 dstStrideBGRA:(int)bytesPerRow
-                         width:i420Buffer.width
-                        height:i420Buffer.height];
-    }
   }
 
   CVPixelBufferUnlockBaseAddress(outputPixelBuffer, 0);
@@ -261,9 +229,24 @@
     if (_pixelBufferRef) {
       CVBufferRelease(_pixelBufferRef);
     }
-    NSDictionary* pixelAttributes = @{(id)kCVPixelBufferIOSurfacePropertiesKey : @{}};
-    CVPixelBufferCreate(kCFAllocatorDefault, size.width, size.height, kCVPixelFormatType_32BGRA,
+    NSDictionary* pixelAttributes = @{
+      (id)kCVPixelBufferIOSurfacePropertiesKey : @{},
+    };
+    CVPixelBufferCreate(kCFAllocatorDefault, size.width, size.height, 
+                        kCVPixelFormatType_420YpCbCr8BiPlanarFullRange,
                         (__bridge CFDictionaryRef)(pixelAttributes), &_pixelBufferRef);
+    
+    // Set BT.601 Full Range color space (WebRTC I420 uses full range)
+    CVBufferSetAttachment(_pixelBufferRef, kCVImageBufferYCbCrMatrixKey, 
+                          kCVImageBufferYCbCrMatrix_ITU_R_601_4, 
+                          kCVAttachmentMode_ShouldPropagate);
+    CVBufferSetAttachment(_pixelBufferRef, kCVImageBufferColorPrimariesKey, 
+                          kCVImageBufferColorPrimaries_SMPTE_C, 
+                          kCVAttachmentMode_ShouldPropagate);
+    CVBufferSetAttachment(_pixelBufferRef, kCVImageBufferTransferFunctionKey, 
+                          kCVImageBufferTransferFunction_ITU_R_709_2, 
+                          kCVAttachmentMode_ShouldPropagate);
+    
     _frameAvailable = false;
     _frameSize = size;
   }
